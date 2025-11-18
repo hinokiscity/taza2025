@@ -4,18 +4,20 @@ from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
 from aiogram.utils.token import TokenValidationError
-
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
-
 from aiogram.filters import Command
 
 
-# === TOKEN ===
 TOKEN = os.getenv("BOT_TOKEN")
+GROUP_ID = os.getenv("GROUP_ID")
+
 if not TOKEN:
-    raise TokenValidationError("BOT_TOKEN environment variable is missing!")
+    raise TokenValidationError("❌ BOT_TOKEN topilmadi (Railway env)")
+
+if not GROUP_ID:
+    raise TokenValidationError("❌ GROUP_ID topilmadi (Railway env)")
 
 
 bot = Bot(
@@ -26,21 +28,19 @@ bot = Bot(
 dp = Dispatcher(storage=MemoryStorage())
 
 
-# === STATES ===
 class Form(StatesGroup):
     fio = State()
     phone = State()
     video = State()
 
 
-# === /START ===
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
-    await message.answer("Salom! Ismingiz va familiyangizni kiriting:")
+    await state.clear()
+    await message.answer("Salom! FIO kiriting:")
     await state.set_state(Form.fio)
 
 
-# === FIO ===
 @dp.message(Form.fio)
 async def get_fio(message: types.Message, state: FSMContext):
     await state.update_data(fio=message.text)
@@ -48,7 +48,6 @@ async def get_fio(message: types.Message, state: FSMContext):
     await state.set_state(Form.phone)
 
 
-# === PHONE ===
 @dp.message(Form.phone)
 async def get_phone(message: types.Message, state: FSMContext):
     await state.update_data(phone=message.text)
@@ -56,10 +55,8 @@ async def get_phone(message: types.Message, state: FSMContext):
     await state.set_state(Form.video)
 
 
-# === VIDEO ===
 @dp.message(Form.video, F.video)
 async def get_video(message: types.Message, state: FSMContext):
-
     data = await state.get_data()
     fio = data["fio"]
     phone = data["phone"]
@@ -70,24 +67,19 @@ async def get_video(message: types.Message, state: FSMContext):
         f"📞 Telefon: {phone}"
     )
 
-    GROUP_ID = os.getenv("GROUP_ID")
-    if not GROUP_ID:
-        await message.answer("⚠️ GROUP_ID topilmadi! Railway env-ga qo‘shing.")
-        return
-
+    # Videoni guruhga yuborish
     await bot.send_video(
         chat_id=int(GROUP_ID),
         video=message.video.file_id,
         caption=caption
     )
 
-    await message.answer("Video muvaffaqiyatli yuborildi! Rahmat!")
+    await message.answer("Video yuborildi! Rahmat!")
     await state.clear()
 
 
-# === RUN BOT ===
 async def main():
-    print("Bot ishga tushdi…")
+    print("Bot ishga tushdi...")
     await dp.start_polling(bot)
 
 
