@@ -1,17 +1,21 @@
 import os
 import asyncio
-from aiogram import Bot, Dispatcher, F, types
+from aiogram import Bot, Dispatcher, types, F
 from aiogram.enums import ParseMode
 from aiogram.client.default import DefaultBotProperties
+from aiogram.utils.token import TokenValidationError
+
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.storage.memory import MemoryStorage
+
 from aiogram.filters import Command
 
 
+# === TOKEN ===
 TOKEN = os.getenv("BOT_TOKEN")
 if not TOKEN:
-    raise Exception("❌ BOT_TOKEN environment variable yo‘q!")
+    raise TokenValidationError("BOT_TOKEN environment variable is missing!")
 
 
 bot = Bot(
@@ -22,18 +26,21 @@ bot = Bot(
 dp = Dispatcher(storage=MemoryStorage())
 
 
+# === STATES ===
 class Form(StatesGroup):
     fio = State()
     phone = State()
     video = State()
 
 
+# === /START ===
 @dp.message(Command("start"))
 async def cmd_start(message: types.Message, state: FSMContext):
-    await message.answer("Salom! FIO kiriting:")
+    await message.answer("Salom! Ismingiz va familiyangizni kiriting:")
     await state.set_state(Form.fio)
 
 
+# === FIO ===
 @dp.message(Form.fio)
 async def get_fio(message: types.Message, state: FSMContext):
     await state.update_data(fio=message.text)
@@ -41,6 +48,7 @@ async def get_fio(message: types.Message, state: FSMContext):
     await state.set_state(Form.phone)
 
 
+# === PHONE ===
 @dp.message(Form.phone)
 async def get_phone(message: types.Message, state: FSMContext):
     await state.update_data(phone=message.text)
@@ -48,7 +56,8 @@ async def get_phone(message: types.Message, state: FSMContext):
     await state.set_state(Form.video)
 
 
-@dp.message(Form.video, F.video.as_())
+# === VIDEO ===
+@dp.message(Form.video, F.video)
 async def get_video(message: types.Message, state: FSMContext):
 
     data = await state.get_data()
@@ -63,7 +72,7 @@ async def get_video(message: types.Message, state: FSMContext):
 
     GROUP_ID = os.getenv("GROUP_ID")
     if not GROUP_ID:
-        await message.answer("⚠️ GROUP_ID env yo‘q!")
+        await message.answer("⚠️ GROUP_ID topilmadi! Railway env-ga qo‘shing.")
         return
 
     await bot.send_video(
@@ -72,12 +81,13 @@ async def get_video(message: types.Message, state: FSMContext):
         caption=caption
     )
 
-    await message.answer("Video yuborildi! Rahmat!")
+    await message.answer("Video muvaffaqiyatli yuborildi! Rahmat!")
     await state.clear()
 
 
+# === RUN BOT ===
 async def main():
-    print("Bot ishga tushdi...")
+    print("Bot ishga tushdi…")
     await dp.start_polling(bot)
 
 
